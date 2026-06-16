@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
     }
 
-    const itemsToDeliver: { id: number; codes: string[]; slip: string }[] = [];
+    const itemsToDeliver: { id: number; codes: string[]; slip: string; activateTill: string }[] = [];
     let totalKeys = 0;
 
     for (const item of fullOrder.items) {
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
         .update({ status: "sent", sent_at: new Date().toISOString() })
         .in("id", keyIds);
 
-      itemsToDeliver.push({ id: item.id, codes, slip: product.instruction || "" });
+      itemsToDeliver.push({ id: item.id, codes, slip: product.instruction || "", activateTill: new Date(Date.now() + 30 * 86400 * 1000).toISOString() });
 
       for (const keyId of keyIds) {
         await supabaseAdmin.from("order_items").insert({
