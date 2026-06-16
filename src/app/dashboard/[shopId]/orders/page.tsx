@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Order } from "@/types";
-import { ArrowLeft, ShoppingBag, Search } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Search, Send } from "lucide-react";
 
 export default function OrdersPage() {
   const { shopId } = useParams<{ shopId: string }>();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [search, setSearch] = useState("");
+  const [delivering, setDelivering] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -36,6 +38,32 @@ export default function OrdersPage() {
       setError(err instanceof Error ? err.message : "Ошибка");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDeliver(orderIdYm: string) {
+    if (!confirm(`Отправить ключи для заказа #${orderIdYm}?`)) return;
+    setDelivering(orderIdYm);
+    setError("");
+    setSuccess("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/orders/deliver", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ shop_id: shopId, order_id_ym: orderIdYm }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Ошибка отправки");
+      setSuccess(`Заказ #${orderIdYm} отправлен! Ключей: ${data.totalKeys}`);
+      await loadOrders();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка");
+    } finally {
+      setDelivering(null);
     }
   }
 
@@ -73,6 +101,11 @@ export default function OrdersPage() {
         {error && (
           <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg p-3">
             {error}
+          </p>
+        )}
+        {success && (
+          <p className="mb-4 text-sm text-green-600 bg-green-50 rounded-lg p-3">
+            {success}
           </p>
         )}
 
@@ -117,11 +150,26 @@ export default function OrdersPage() {
                   <span className="text-sm text-gray-500">
                     {order.total_keys} ключей
                   </span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">
-                    {order.status === "PROCESSING"
-                      ? "Отправлен"
-                      : order.status}
-                  </span>
+                  {order.total_keys > 0 ? (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">
+                      Отправлен
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleDeliver(order.order_id_ym)}
+                      disabled={delivering === order.order_id_ym}
+                      className="btn btn-sm flex items-center gap-1"
+                    >
+                      {delivering === order.order_id_ym ? (
+                        "Отправка..."
+                      ) : (
+                        <>
+                          <Send className="h-3.5 w-3.5" />
+                          Отправить
+                        </>
+                      )}
+                    </button>
+                  )}
                   <span className="text-xs text-gray-400">
                     {new Date(order.created_at).toLocaleDateString(
                       "ru-RU",
