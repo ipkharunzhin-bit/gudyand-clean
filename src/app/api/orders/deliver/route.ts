@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getUserIdFromRequest } from "@/lib/jwt";
-import { getOrders, deliverDigitalGoods, updateStocks } from "@/lib/yandex";
+import { getOrderById, deliverDigitalGoods, updateStocks } from "@/lib/yandex";
 
 // Ручная отправка товара
 export async function POST(request: NextRequest) {
@@ -49,15 +49,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Получаем детали заказа из Яндекса
-    const ordersData = await getOrders(shop.api_key, shop.business_id, {
-      statuses: ["PROCESSING"],
-      campaignIds: [shop.campaign_id],
-      limit: 10,
-    });
-
-    const fullOrder = ordersData.orders?.find((o) => String(o.id) === order_id_ym);
+    const fullOrder = await getOrderById(shop.api_key, shop.business_id, shop.campaign_id, Number(order_id_ym));
     if (!fullOrder) {
-      return NextResponse.json({ error: "Order not found in Yandex API. Check order status." }, { status: 404 });
+      return NextResponse.json({ error: "Order not found in Yandex API. Check order ID." }, { status: 404 });
     }
 
     const itemsToDeliver: { id: number; codes: string[]; slip: string; activateTill: string }[] = [];

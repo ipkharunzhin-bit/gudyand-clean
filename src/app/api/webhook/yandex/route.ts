@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getOrders, deliverDigitalGoods, updateStocks } from "@/lib/yandex";
+import { getOrderById, deliverDigitalGoods, updateStocks } from "@/lib/yandex";
 
 // Яндекс проверяет URL через GET — всегда отвечаем OK
 export async function GET() {
@@ -39,13 +39,6 @@ export async function POST(request: NextRequest) {
     const status = order.status;
     const buyerEmail = order.buyer?.email || "";
 
-    if (status !== "PROCESSING") {
-      return NextResponse.json({
-        status: "skipped",
-        reason: `Order status is ${status}, not PROCESSING`,
-      });
-    }
-
     const campaignId = order.campaignId;
     if (!campaignId) {
       return NextResponse.json({ error: "No campaignId" }, { status: 400 });
@@ -72,13 +65,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "skipped", reason: "Order already processed" });
     }
 
-    const ordersData = await getOrders(shop.api_key, shop.business_id, {
-      statuses: ["PROCESSING"],
-      campaignIds: [shop.campaign_id],
-      limit: 10,
-    });
-
-    const fullOrder = ordersData.orders?.find((o) => o.id === order.id);
+    const fullOrder = await getOrderById(shop.api_key, shop.business_id, shop.campaign_id, order.id);
     if (!fullOrder) {
       return NextResponse.json({ error: "Order not found in API" }, { status: 404 });
     }

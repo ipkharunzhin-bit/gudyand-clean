@@ -155,6 +155,16 @@ export async function getOrders(
   return data;
 }
 
+// Получить заказ по ID
+export async function getOrderById(apiKey: string, businessId: number, campaignId: number, orderId: number) {
+  const data = await yandexRequest<{ order: YandexOrder }>(
+    apiKey,
+    `/v2/campaigns/${campaignId}/orders/${orderId}`,
+    "GET"
+  );
+  return data.order || null;
+}
+
 // Передать ключи цифровых товаров (deliverDigitalGoods)
 export async function deliverDigitalGoods(
   apiKey: string,

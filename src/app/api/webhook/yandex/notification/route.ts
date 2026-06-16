@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { deliverDigitalGoods, updateStocks } from "@/lib/yandex";
+import { getOrderById, deliverDigitalGoods, updateStocks } from "@/lib/yandex";
 
 const YANDEX_API = "https://api.partner.market.yandex.ru";
 
@@ -44,20 +44,13 @@ export async function POST(request: NextRequest) {
 
     if (existing) return NextResponse.json({ status: "skipped", reason: "Already processed" });
 
-    // Получаем детали заказа для item.id
+    // Получаем детали заказа
+    const fullOrder = await getOrderById(shop.api_key, shop.business_id, shop.campaign_id, Number(orderId));
+    
     let orderItems: any[] = [];
-    try {
-      const res = await fetch(`${YANDEX_API}/campaigns/${campaignId}/orders/${orderId}`, {
-        headers: { "Api-Key": shop.api_key, Accept: "application/json" },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.order?.items) orderItems = data.order.items;
-      }
-    } catch {}
-
-    // Если не получили через API — используем уведомление
-    if (orderItems.length === 0 && items && Array.isArray(items)) {
+    if (fullOrder?.items) {
+      orderItems = fullOrder.items;
+    } else if (items && Array.isArray(items)) {
       orderItems = items.map((i: any) => ({ offerId: i.offerId, count: i.count, id: 0 }));
     }
 
