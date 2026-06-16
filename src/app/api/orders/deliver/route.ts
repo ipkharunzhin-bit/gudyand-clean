@@ -38,7 +38,13 @@ export async function POST(request: NextRequest) {
       let totalSent = 0;
 
       for (const ymOrder of processingOrders) {
-        const ymOrderId = String(ymOrder.id);
+        const ymOrderId = String(ymOrder.id || ymOrder.orderId);
+        const ymOrderIdNum = ymOrder.id || ymOrder.orderId || 0;
+
+        if (!ymOrderIdNum) {
+          results.push(`SKIP: order without id`);
+          continue;
+        }
 
         // Пропускаем уже обработанные
         const { data: existing } = await supabaseAdmin
@@ -74,7 +80,7 @@ export async function POST(request: NextRequest) {
         const itemsToDeliver: { id: number; codes: string[]; slip: string; activateTill: string }[] = [];
         let orderKeys = 0;
 
-        for (const item of ymOrder.items) {
+        for (const item of ymOrder.items || []) {
           const offerId = item.offerId;
           const count = item.count;
 
@@ -135,7 +141,7 @@ export async function POST(request: NextRequest) {
 
         if (itemsToDeliver.length > 0) {
           try {
-            await deliverDigitalGoods(shop.api_key, shop.business_id, shop.campaign_id, ymOrder.id, itemsToDeliver);
+            await deliverDigitalGoods(shop.api_key, shop.business_id, shop.campaign_id, ymOrderIdNum, itemsToDeliver);
             results.push(`${ymOrderId}: отправлено ${orderKeys} ключей`);
             totalSent += orderKeys;
           } catch (e: any) {
