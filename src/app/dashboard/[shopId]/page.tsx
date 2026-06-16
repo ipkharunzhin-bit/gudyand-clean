@@ -14,6 +14,7 @@ import {
   Pencil,
   X,
   Trash2,
+  Send,
 } from "lucide-react";
 
 interface ShopData {
@@ -39,6 +40,8 @@ export default function ShopProductsPage() {
   const [editCampaignId, setEditCampaignId] = useState("");
   const [editSaving, setEditSaving] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [sendingOrders, setSendingOrders] = useState(false);
+  const [sendResult, setSendResult] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -99,6 +102,28 @@ export default function ShopProductsPage() {
       if (!res.ok) throw new Error(data.error);
       await loadProducts(shopId);
     } catch (err) { setError(err instanceof Error ? err.message : "Ошибка"); } finally { setLoadingProducts(false); }
+  }
+
+  async function handleSendActiveOrders() {
+    if (!confirm("Отправить все активные заказы (PROCESSING) с Яндекс Маркета?")) return;
+    setSendingOrders(true);
+    setSendResult("");
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/orders/deliver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ shop_id: shopId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSendResult(JSON.stringify(data, null, 2));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка");
+    } finally {
+      setSendingOrders(false);
+    }
   }
 
   async function openEdit() {
@@ -180,6 +205,7 @@ export default function ShopProductsPage() {
 
       <div className="mx-auto max-w-4xl px-6 py-8">
         {error && <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg p-3">{error}</p>}
+        {sendResult && <pre className="mb-4 text-xs text-gray-700 bg-gray-50 rounded-lg p-3 overflow-auto max-h-48">{sendResult}</pre>}
 
         <div className="card mb-6 flex flex-col sm:flex-row items-center gap-4">
           <div className="relative flex-1 w-full">
@@ -188,6 +214,9 @@ export default function ShopProductsPage() {
           </div>
           <button onClick={handleDeleteAllProducts} disabled={deletingAll || products.length === 0} className="btn-danger whitespace-nowrap">
             <Trash2 className="mr-1 h-4 w-4" />{deletingAll ? "Удаление..." : "Удалить все"}
+          </button>
+          <button onClick={handleSendActiveOrders} disabled={sendingOrders} className="btn-primary whitespace-nowrap">
+            <Send className="mr-1 h-4 w-4" />{sendingOrders ? "Отправка..." : "Отправить заказы"}
           </button>
           <button onClick={handleLoadFromYandex} disabled={loadingProducts} className="btn-primary whitespace-nowrap">
             <Download className="mr-1 h-4 w-4" />{loadingProducts ? "Загрузка..." : "Загрузить товары"}
