@@ -174,12 +174,14 @@ export async function deliverDigitalGoods(
     `/v2/campaigns/${campaignId}/orders/${orderId}/deliverDigitalGoods`,
     "POST",
     {
-      items: items.map((item) => ({
-        id: item.id,
-        codes: item.codes,
-        slip: item.slip || "",
-        activateTill: item.activateTill || item.activate_till || new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
-      })),
+      items: items.map((item) => {
+        const till = item.activateTill || item.activate_till || new Date(Date.now() + 30 * 86400 * 1000).toISOString();
+        return {
+          id: item.id,
+          codes: item.codes.map((code) => ({ code, activateTill: till })),
+          slip: item.slip || "",
+        };
+      }),
     }
   );
 }
