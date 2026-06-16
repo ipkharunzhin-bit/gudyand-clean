@@ -191,8 +191,9 @@ export async function deliverDigitalGoods(
         const till = item.activateTill || item.activate_till || new Date(Date.now() + 30 * 86400 * 1000).toISOString();
         return {
           id: item.id,
-          codes: item.codes.map((code) => ({ code, activateTill: till })),
+          codes: item.codes,
           slip: item.slip || "",
+          activateTill: till,
         };
       }),
     }
