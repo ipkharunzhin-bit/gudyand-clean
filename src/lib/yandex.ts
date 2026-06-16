@@ -147,12 +147,15 @@ export async function getOrders(
   if (params.pageToken) body.pageToken = params.pageToken;
   if (params.campaignIds) body.campaignIds = params.campaignIds;
 
-  const data = await yandexRequest<{
-    orders: YandexOrder[];
-    paging?: { nextPageToken?: string };
-  }>(apiKey, `/v1/businesses/${businessId}/orders`, "POST", body);
+  const data = await yandexRequest<any>(
+    apiKey, `/v1/businesses/${businessId}/orders`, "POST", body
+  );
 
-  return data;
+  console.log("GET_ORDERS RESPONSE:", JSON.stringify(data).substring(0, 500));
+
+  // Яндекс может обернуть ответ в result или pager
+  const orders = data.orders || data.result?.orders || [];
+  return { orders, paging: data.paging || data.result?.paging };
 }
 
 // Получить заказ по ID
